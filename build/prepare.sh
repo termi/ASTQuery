@@ -4,17 +4,17 @@ cd ..
 rm -rf build/npm
 mkdir build/npm
 
-git archive master -o build/npm/ast-query.tar --prefix=ast-query/
+git archive master -o build/npm/astquery.tar --prefix=astquery/
 
 cd build/npm
 
-tar xf ast-query.tar && rm ast-query.tar
+tar xf astquery.tar && rm astquery.tar
 
-cd ast-query
+cd astquery
 rm .gitignore
 
 cd build
 ./build.sh
 
 cd ../..
-tar czf ast-query.tgz ast-query && rm -rf ast-query
+tar czf astquery.tgz astquery && rm -rf astquery

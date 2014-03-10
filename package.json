@@ -1,5 +1,5 @@
 {
-  "name": "ast-query",
+  "name": "astquery",
   "version": "0.0.1",
   "description": "",
   "main": "./build/es5/ASTQuery.js",

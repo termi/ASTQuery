@@ -2,7 +2,7 @@
 
 clean.sh
 
-echo "beginning ast-alter build"
+echo "beginning astalter build"
 
 mkdir es5
 mkdir npm

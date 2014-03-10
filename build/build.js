@@ -6,8 +6,6 @@ const es6transpiler = require('es6-transpiler')
 	, BUILD_VERSION = require('../package.json').version
 ;
 
-console.log("beginning ast-alter build");
-
 function prepareFile(dir, targetDir) {
 	let results = [];
 
