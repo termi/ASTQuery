@@ -51,7 +51,7 @@ const VISITOR_KEYS = {
 	SpreadElement: ['argument'],
 	SwitchCase: ['test', 'consequent'],
 	SwitchStatement: ['discriminant', 'cases'],
-	TaggedTemplateExpression: ['expressions', 'quasis'],
+	TaggedTemplateExpression: ['tag', 'quasi'],
 	TemplateElement: [],
 	TemplateLiteral: ['expressions', 'quasis'],
 	ThisExpression: [],
