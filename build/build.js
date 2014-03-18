@@ -4,52 +4,57 @@ const es6transpiler = require('es6-transpiler')
 	, path = require('path')
 	, fs = require('fs')
 	, BUILD_VERSION = require('../package.json').version
+	, targetDir = path.join(__dirname, 'es5')
+	, srcDir = path.join(__dirname, '..', 'src')
+	, projectDit = path.join(__dirname, '..')
 ;
 
-function prepareFile(dir, targetDir) {
-	let results = [];
+function prepareFile(files, fileOrDir, fullPath) {
+	let extname = path.extname(fileOrDir);
+	let fileName = fullPath === true ? fileOrDir : path.join(srcDir, fileOrDir);
+	let outputFileName = fullPath === true ? path.join(targetDir, path.relative(srcDir, fileOrDir)) : path.join(targetDir, fileOrDir);
+	let isFile = false;
 
-	if ( !path.existsSync(path.join(targetDir, dir)) ) {
-		fs.mkdirSync(path.join(targetDir, dir));
+	if ( fs.existsSync(extname ? fileName : fileName + ".js") ) {
+		fileName = extname ? fileName : fileName + ".js";
+		outputFileName = extname ? outputFileName : outputFileName + ".js";
+		isFile = true;
+		extname = path.extname(fileName);
 	}
 
-	let list = fs.readdirSync(dir);
+	if ( isFile ) {
+		if ( extname === '.js' ) {
+			files.push({src: fileName, dest: outputFileName});
+		}
+	}
+	else if ( fs.existsSync(fileName) ) {
+		if ( !fs.existsSync(outputFileName) ) {
+//		    console.log('make a', outputFileName)
+		    fs.mkdirSync(outputFileName);
+		}
 
-	list.forEach(function(file) {
-		file = path.join(dir, file);
-
-		let stat = fs.statSync(file);
-
-//		console.log(file, stat.isDirectory(), path.join(targetDir, dir) )
+		let stat = fs.statSync(fileName);
 		if ( stat && stat.isDirectory() ) {
-			results = results.concat(prepareFile(file, targetDir));
+			fs.readdirSync(fileName).forEach(function(file) {
+				prepareFile(files, path.join(fileName, file), true);
+			});
 		}
-		else if ( path.extname(file) === '.js' ) {
-			results.push(file);
-		}
-	});
+	}
 
-	return results;
+	return files;
 }
 
-let moduleFiles = ['ASTQuery'];
-let testFiles = prepareFile(path.join('..', 'test'), 'build');
+[
+	'ASTQuery'
+	, 'keys'
+	, path.join('..', 'test')
+].reduce(prepareFile, []).forEach(function(file) {
+	let srcFilename = file.src;
+	let outputFilename = file.dest;
 
-//console.log(testFiles);process.exit(0)
+	console.log('compile ' + path.relative(projectDit, srcFilename) + ' to ' + path.relative(projectDit, outputFilename));
 
-moduleFiles.concat(testFiles).forEach(function(filename) {
-	filename = filename.replace(/\//g, path.sep);
-	if ( path.extname(filename) !== '.js' ) {
-		filename += '.js';
-	}
-
-	let outputFilename = path.join('es5', filename);
-
-	filename = path.join('..', 'src', filename);
-
-	console.log('compile ' + filename + ' to ' + outputFilename);
-
-	let fileContent = String(fs.readFileSync(filename)).replace("%%BUILD_VERSION%%", BUILD_VERSION);
+	let fileContent = String(fs.readFileSync(srcFilename)).replace("%%BUILD_VERSION%%", BUILD_VERSION);
 
 	let res = es6transpiler.run({src: fileContent});
 
@@ -62,4 +67,4 @@ moduleFiles.concat(testFiles).forEach(function(filename) {
 	fs.writeFileSync(outputFilename, fileContent);
 });
 
-console.log("done build")
+console.log("done build");
