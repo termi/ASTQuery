@@ -356,7 +356,7 @@ class ASTQuery {
 
 				callback["@@attr_check"] = attrRules;
 
-				callbacks.push(callback);
+				callbacks.push({callback, attrRules});
 			}
 		}
 
@@ -373,10 +373,8 @@ class ASTQuery {
 			}
 
 			let visit = (node, parent, propName, childIndex) => {
-				for( let callback of [...typeSelectorsMap["*"], ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])] ) {
-					let attr_check = callback["@@attr_check"];
-
-					if( !attr_check || !attr_check.length || matchAttributes(node, attr_check) ) {
+				for( let {callback, attrRules} of [...typeSelectorsMap["*"], ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])] ) {
+					if( !attrRules || !attrRules.length || matchAttributes(node, attrRules) ) {
 						matchedCallbacks.push({callback, node});
 					}
 				}

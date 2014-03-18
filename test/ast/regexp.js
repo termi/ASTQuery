@@ -1,4 +1,16 @@
 module.exports = [
+	{"type": "disjunction", "alternatives": [
+		{"type": "alternative", "terms": [
+			{"type": "group", "behavior": "normal", "disjunction": {"type": "alternative", "terms": [
+				{"type": "escapeChar", "value": "S", "from": 1, "to": 3, "raw": "\\S"}
+			], "from": 1, "to": 3, "raw": "\\S"}, "from": 0, "to": 4, "raw": "(\\S)", "matchIdx": 1, "lastMatchIdx": 1}
+		], "from": 0, "to": 4, "raw": "(\\S)"},
+		{"type": "alternative", "terms": [
+			{"type": "group", "behavior": "normal", "disjunction": {"type": "alternative", "terms": [
+				{"type": "dot", "from": 6, "to": 7, "raw": "."}
+			], "from": 6, "to": 7, "raw": "."}, "from": 5, "to": 8, "raw": "(.)", "matchIdx": 2, "lastMatchIdx": 2}
+		], "from": 5, "to": 8, "raw": "(.)"}
+	], "from": 0, "to": 8, "raw": "(\\S)|(.)", "lastMatchIdx": 2},
 	{
 		"type": "disjunction",
 		"alternatives": [
