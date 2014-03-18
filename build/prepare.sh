@@ -16,5 +16,17 @@ rm .gitignore
 cd build
 ./build.sh
 
-cd ../..
+rm -rf ./npm
+rm -rf ./test
+rm build.js
+rm build.sh
+rm clean.sh
+rm prepare.sh
+rm test.sh
+
+cd ..
+rm -rf ./src
+rm -rf ./test
+
+cd ..
 tar czf astquery.tgz astquery && rm -rf astquery
