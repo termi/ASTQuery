@@ -2,70 +2,6 @@
 
 const BUILD_VERSION = "%%BUILD_VERSION%%";
 
-const VISITOR_KEYS = {
-	ArrayExpression: ['elements'],
-	ArrayPattern: ['elements'],
-	ArrowFunctionExpression: ['params', 'body', 'defaults', 'rest'],
-	AssignmentExpression: ['left', 'right'],
-	BinaryExpression: ['left', 'right'],
-	BlockStatement: ['body'],
-	BreakStatement: ['label'],
-	CallExpression: ['callee', 'arguments'],
-	CatchClause: ['param', 'body'],
-	ClassBody: ['body'],
-	ClassDeclaration: ['id', 'body', 'superClass'],
-	ClassExpression: ['id', 'body', 'superClass'],
-	ComprehensionBlock: ['left', 'right'],
-	ComprehensionExpression: ['filter', 'blocks', 'body'],
-	ConditionalExpression: ['test', 'consequent', 'alternate'],
-	ContinueStatement: ['label'],
-	DebuggerStatement: [],
-	DoWhileStatement: ['body', 'test'],
-	EmptyStatement: [],
-	ExportDeclaration: ['declaration', 'specifiers', 'source'],
-	ExportBatchSpecifier: [],
-	ExportSpecifier: ['id', 'name'],//TODO:: check 'name' needs
-	ExpressionStatement: ['expression'],
-	ForInStatement: ['left', 'right', 'body'],
-	ForOfStatement: ['left', 'right', 'body'],
-	ForStatement: ['init', 'test', 'update', 'body'],
-	FunctionDeclaration: ['id', 'params', 'body', 'defaults', 'rest'],
-	FunctionExpression: ['id', 'params', 'body', 'defaults', 'rest'],
-	Identifier: [],
-	IfStatement: ['test', 'consequent', 'alternate'],
-	ImportDeclaration: ['specifiers', 'source'],
-	ImportSpecifier: ['id', 'name'],//TODO:: check 'name' needs
-	LabeledStatement: ['label', 'body'],
-	Literal: [],
-	LogicalExpression: ['left', 'right'],
-	MemberExpression: ['object', 'property'],
-	MethodDefinition: ['key', 'value'],
-	ModuleDeclaration: ['id', 'source', 'body'],
-	NewExpression: ['callee', 'arguments'],
-	ObjectExpression: ['properties'],
-	ObjectPattern: ['properties'],
-	Program: ['body'],
-	Property: ['key', 'value'],
-	ReturnStatement: ['argument'],
-	SequenceExpression: ['expressions'],
-	SpreadElement: ['argument'],
-	SwitchCase: ['test', 'consequent'],
-	SwitchStatement: ['discriminant', 'cases'],
-	TaggedTemplateExpression: ['tag', 'quasi'],
-	TemplateElement: [],
-	TemplateLiteral: ['expressions', 'quasis'],
-	ThisExpression: [],
-	ThrowStatement: ['argument'],
-	TryStatement: ['block', 'handlers', 'handler', 'guardedHandlers', 'finalizer'],
-	UnaryExpression: ['argument'],
-	UpdateExpression: ['argument'],
-	VariableDeclaration: ['declarations'],
-	VariableDeclarator: ['id', 'init'],
-	WhileStatement: ['test', 'body'],
-	WithStatement: ['object', 'body'],
-	YieldExpression: ['argument']
-};
-
 const
 	/** @type {RegExp} @const */
 	RE__queryComplexSelector__selectorsMatcher = /(^|,|>|\+|~|\s).+?(?=[,>+~\s]|$)/g
@@ -346,7 +282,24 @@ function matchAttributes(node, attributes) {
 }
 
 class ASTQuery {
-	constructor(ast, options = {}) {
+	static getVisitorKeys(visitorKeysName) {
+		if ( typeof visitorKeysName === 'object' ) {
+			return visitorKeysName;
+		}
+		else {
+			visitorKeysName = String(visitorKeysName).toLowerCase();
+			try {
+				return require(`./keys/${visitorKeysName}.js`);
+			}
+			catch(e) {
+				throw new Error(`Unrecognized type of visitor keys "${visitorKeysName}"`);
+			}
+		}
+	}
+
+	constructor(ast, visitorKeys, options = {}) {
+		this.visitorKeys = ASTQuery.getVisitorKeys(visitorKeys);
+
 		this.ast = ast;
 
 		this.options = options;
@@ -453,11 +406,11 @@ class ASTQuery {
 					children = node["$children"] = [];
 				}
 
-				for ( const propName of VISITOR_KEYS[node.type] ) {
+				for ( const propName of this.visitorKeys[node.type] ) {
 					const child = node[propName];
 
 					if ( Array.isArray(child) ) {
-						for ( let _child of child ) {
+						for ( let _child of child ) if ( _child ) {
 							if ( !prepared ) {
 								children.push(_child)
 							}
@@ -494,6 +447,38 @@ class ASTQuery {
 
 	match(node, selector, scope) {
 		// TODO::
+	}
+
+	traverse(node, callback) {
+		if ( callback === void 0 && typeof node === 'function' ) {
+			callback = node;
+			node = this.ast;
+		}
+
+		let visit = (node, parent, propName, childIndex) => {
+			if ( callback(node, parent, propName, childIndex) === false ) {
+				return false;
+			}
+
+			for ( const propName of this.visitorKeys[node.type] ) {
+				const child = node[propName];
+
+				if ( Array.isArray(child) ) {
+					for ( let _child of child ) if ( _child ) {
+						if ( visit(_child, node, propName, childIndex) === false ) {
+							return false;
+						}
+					}
+				}
+				else if ( child ) {
+					if ( visit(child, node, propName) === false ) {
+						return false;
+					}
+				}
+			}
+		};
+
+		visit(node);
 	}
 }
 ASTQuery.version = BUILD_VERSION;
