@@ -60,7 +60,7 @@ function prepareFile(files, fileOrDir, fullPath) {
 	let res = es6transpiler.run({src: fileContent});
 
 	if ( res.errors && res.errors.length ) {
-		console.error.apply(console.error, ['ERRORS:: \n   '].concat(res.errors, ['\n']));
+		console.error.apply(console.error, ['ERRORS in file "' + path.relative(projectDit, srcFilename) + '":: \n   '].concat(res.errors, ['\n']));
 		return;
 	}
 

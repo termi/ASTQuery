@@ -82,7 +82,8 @@ function parseSelector(selector) {
 		, prevRule
 		, isFirstRule
 		, isLastRule
-		;
+	;
+
 	do {
 		//check rule if it start with "," -> next chain of one or more compound selectors
 		isFirstRule = index1 === 0 || rule.charAt(0) === ',';
