@@ -65,4 +65,23 @@ exports['simple'] = {
 		test.equals(nodesCount, nodesCountExpected, `should found ${nodesCountExpected} node's`);
 		test.done();
 	}
+
+	, '"post" callback test': function(test) {
+		const nodesSequenceExpected = "|disjunction|alternative|alternative|escapeChar|^group|alternative|alternative|^group|^disjunction";
+		let nodesSequence = "";
+
+		let pre = ({type}) => (nodesSequence = nodesSequence + "|" + type);
+		let post = ({type}) => (nodesSequence = nodesSequence + "|^" + type);
+
+		regExpAstQuery.on({
+			'disjunction': pre
+			, 'alternative': pre
+			, '^group': post
+			, 'escapeChar': pre
+			, '^disjunction': post
+		});
+
+		test.equals(nodesSequence, nodesSequenceExpected, `the node sequence should be ${nodesSequenceExpected}`);
+		test.done();
+	}
 };

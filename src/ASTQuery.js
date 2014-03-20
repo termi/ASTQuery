@@ -8,6 +8,8 @@ const assert = function(expect, msg) {
 	}
 };
 
+let temp = [];temp = [x for(x of temp)];//avoid es6-transpiler 0.7.8 GET_ITER bug
+
 const { parseSelector, parseAttrSelector, matchAttributes } = require('./querySelector.js');
 
 class ASTQuery {
@@ -45,7 +47,7 @@ class ASTQuery {
 
 		if( parentNode ) {
 			node["$parentNode"] = parentNode;
-			node["$parentProp"] = propName;
+			node["$parentProp"] = parentProp;
 
 			if( childIndex !== void 0 ) {
 				node["$childIndex"] = childIndex;
@@ -65,10 +67,19 @@ class ASTQuery {
 		let typeSelectorsMap = Object.create(null);
 		typeSelectorsMap["*"] = [];
 		let nameSelectorsMap = Object.create(null);
+		let isPostCallbacks = false;
 
 		for( let selector in selectorsMap ) if( selectorsMap.hasOwnProperty(selector) ) {
 			let callback = selectorsMap[selector];
 			assert(typeof callback === 'function', 'Callback must be a function');
+
+			selector = selector.trim();
+
+			let isPostCallback = selector[0] === '^';
+			if ( isPostCallback ) {
+				selector = selector.substr(1).trim();
+				isPostCallbacks = true;
+			}
 
 			for( let [ , , typeName, nameValue, className, attrRules = [], pseudoClass, isParentSelector, , nextRule] of parseSelector(selector) ) {
 
@@ -106,7 +117,7 @@ class ASTQuery {
 					callbacks = typeSelectorsMap["*"];
 				}
 
-				callbacks.push({callback, attrRules});
+				callbacks.push({callback, attrRules, isPostCallback});
 			}
 		}
 
@@ -119,9 +130,9 @@ class ASTQuery {
 				onnode = void 0;
 			}
 
-			traverse(this.ast, (node, parentNode, parentProp, childIndex) => {
-				for( let {callback, attrRules} of [...typeSelectorsMap["*"], ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])] ) {
-					if( !attrRules || !attrRules.length || matchAttributes(node, attrRules) ) {
+			let callback = (node, parentNode, parentProp, childIndex, isPost) => {
+				for( let {callback, attrRules, isPostCallback} of [...typeSelectorsMap["*"], ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])] ) {
+					if( isPost == isPostCallback && (!attrRules || !attrRules.length || matchAttributes(node, attrRules)) ) {
 						matchedCallbacks.push({callback, node});
 					}
 				}
@@ -131,7 +142,9 @@ class ASTQuery {
 						return;
 					}
 				}
-			});
+			};
+
+			this.traverse(this.ast, callback, isPostCallbacks ? callback : void 0);
 
 			for( let {callback, node} of matchedCallbacks ) {
 				callback(node);
@@ -153,10 +166,18 @@ class ASTQuery {
 		// TODO::
 	}
 
-	traverse(node, callback) {
-		if ( callback === void 0 && typeof node === 'function' ) {
-			callback = node;
-			node = this.ast;
+	traverse(node, pre, post) {
+		if ( pre === void 0 ) {
+			if ( typeof node === 'function' ) {//astQuery.traverse(function(anyNode){})
+				pre = node;
+				node = this.ast;
+			}
+			else if ( typeof post === 'function' ) {
+				pre = () => {};
+			}
+		}
+		if ( typeof post !== 'function' ) {
+			post = void 0;
 		}
 
 		let prepared = this._prepared;
@@ -166,7 +187,7 @@ class ASTQuery {
 				this._prepareNode(node, parentNode, parentProp, childIndex);
 			}
 
-			if ( callback(node, parentNode, parentProp, childIndex) === false ) {
+			if ( pre(node, parentNode, parentProp, childIndex, false) === false ) {
 				return false;
 			}
 
@@ -185,6 +206,12 @@ class ASTQuery {
 					if ( visit(child, node, propName) === false ) {
 						return false;
 					}
+				}
+			}
+
+			if ( post ) {
+				if ( post(node, parentNode, parentProp, childIndex, true) === false ) {
+					return false;
 				}
 			}
 		};
