@@ -46,6 +46,7 @@ function prepareFile(files, fileOrDir, fullPath) {
 
 [
 	'ASTQuery'
+	, 'querySelector'
 	, 'keys'
 	, path.join('..', 'test')
 ].reduce(prepareFile, []).forEach(function(file) {
