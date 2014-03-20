@@ -61,7 +61,7 @@ class ASTQuery {
 		this._prevNode = node;
 	}
 
-	on(selectorsMap) {
+	on(selectorsMap, {prefix} = {}) {
 		assert(typeof selectorsMap === 'object');
 
 		let typeSelectorsMap = Object.create(null);
@@ -69,15 +69,29 @@ class ASTQuery {
 		let nameSelectorsMap = Object.create(null);
 		let isPostCallbacks = false;
 
+		let prefixLength = 0;
+		if ( prefix !== void 0 ) {
+			prefix = String(prefix);
+			prefixLength = prefix.length;
+		}
+
 		for( let selector in selectorsMap ) if( selectorsMap.hasOwnProperty(selector) ) {
 			let callback = selectorsMap[selector];
+
+			if ( prefix ) {
+				if ( selector.substring(0, prefixLength) !== prefix ) {
+					continue;
+				}
+				selector = selector.substring(prefixLength);
+			}
+
 			assert(typeof callback === 'function', 'Callback must be a function');
 
 			selector = selector.trim();
 
 			let isPostCallback = selector[0] === '^';
 			if ( isPostCallback ) {
-				selector = selector.substr(1).trim();
+				selector = selector.substr(1).trim();//TODO:: trimLeft()
 				isPostCallbacks = true;
 			}
 
@@ -147,7 +161,7 @@ class ASTQuery {
 			this.traverse(this.ast, callback, isPostCallbacks ? callback : void 0);
 
 			for( let {callback, node} of matchedCallbacks ) {
-				callback(node);
+				callback.call(selectorsMap, node);
 			}
 		}
 

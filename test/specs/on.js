@@ -84,4 +84,24 @@ exports['simple'] = {
 		test.equals(nodesSequence, nodesSequenceExpected, `the node sequence should be ${nodesSequenceExpected}`);
 		test.done();
 	}
+
+	, 'prefixed selectors': function(test) {
+		const obj = {
+			'::dot': function({type}) {
+				this.setType(type);
+			}
+			, ':: ^ escapeChar': function({type}) {
+				this.setType(type);
+			}
+			, setType(type) {
+				this[type] = type;
+			}
+		};
+
+		regExpAstQuery.on(obj, {prefix: '::'});
+
+		test.equals(obj['dot'], 'dot');
+		test.equals(obj['escapeChar'], 'escapeChar');
+		test.done();
+	}
 };
