@@ -2,15 +2,17 @@
 
 const BUILD_VERSION = "%%BUILD_VERSION%%";
 
+const { parseSelector, parseAttrSelector } = require('./parseSelector.js');
+const { matchAttributes } = require('./matchSelector.js');
+const TokenList = require('./TokenList.js');
+
 const assert = function(expect, msg) {
 	if( expect != true ) {
 		throw new Error(msg || "");
 	}
 };
 
-let temp = [];temp = [x for(x of temp)];//avoid es6-transpiler 0.7.8 GET_ITER bug
-
-const { parseSelector, parseAttrSelector, matchAttributes } = require('./querySelector.js');
+let temp = [];temp = [x for(x of temp)];//avoid es6-transpiler 0.7.8- GET_ITER bug
 
 class ASTQuery {
 	static getVisitorKeys(visitorKeysName) {
@@ -38,6 +40,7 @@ class ASTQuery {
 		ast["__prepared__"] = false;
 		this._sourceIndex = 0;
 		this._prevNode = void 0;
+		this.mods = new TokenList;
 	}
 
 	_prepareNode(node, parentNode, parentProp, childIndex) {
@@ -61,7 +64,58 @@ class ASTQuery {
 		this._prevNode = node;
 	}
 
-	on(selectorsMap, {prefix} = {}) {
+	_isInMods(mod) {
+		if ( !mod && !this.mods.length || mod == '*' ) {
+			return true;
+		}
+
+		return this.mods.contains(mod);
+	}
+
+	_getSelectorMods(selector) {
+		selector = selector.trim();
+
+		let isPost = selector[0] === '^';
+		if ( isPost ) {
+			selector = selector.substr(1).trim();//TODO:: trimLeft()
+		}
+
+		let mod = selector[0] === '?';
+		if ( mod ) {
+			let index = selector.indexOf(" ");
+			let isUniversal = false;
+
+			mod =
+				selector.substr(1, index).split("?")
+					.map( (ns) => {
+						ns = ns.trim();
+						if ( ns == "" || ns == "*" ) {
+							isUniversal = true;
+						}
+						return ns;
+					} )
+			;
+			if ( mod.length === 1 ) {
+				mod = mod[0];
+			}
+			if ( isUniversal ) {
+				mod = "*";
+			}
+
+			selector = selector.substr(index).trim();//TODO:: trimLeft()
+		}
+		else {
+			mod = void 0;
+		}
+
+		return {
+			selector
+			, isPost
+			, mod
+		}
+	}
+
+	on(selectorsMap, {prefix, mod} = {}) {
 		assert(typeof selectorsMap === 'object');
 
 		let typeSelectorsMap = Object.create(null);
@@ -75,7 +129,7 @@ class ASTQuery {
 			prefixLength = prefix.length;
 		}
 
-		for( let selector in selectorsMap ) if( selectorsMap.hasOwnProperty(selector) ) {
+		for ( let selector in selectorsMap ) if ( selectorsMap.hasOwnProperty(selector) ) {
 			let callback = selectorsMap[selector];
 
 			if ( prefix ) {
@@ -87,15 +141,13 @@ class ASTQuery {
 
 			assert(typeof callback === 'function', 'Callback must be a function');
 
-			selector = selector.trim();
-
-			let isPostCallback = selector[0] === '^';
+			let isPostCallback, mod;
+			({selector, mod, isPost: isPostCallback}) = this._getSelectorMods(selector);
 			if ( isPostCallback ) {
-				selector = selector.substr(1).trim();//TODO:: trimLeft()
 				isPostCallbacks = true;
 			}
 
-			for( let [ , , typeName, nameValue, className, attrRules = [], pseudoClass, isParentSelector, , nextRule] of parseSelector(selector) ) {
+			for ( let [ , , typeName, nameValue, className, attrRules = [], pseudoClass, isParentSelector, , nextRule] of parseSelector(selector) ) {
 
 				if ( nextRule ) {
 					throw new Error(`Complex selectors doesn't supported for now`);
@@ -131,13 +183,23 @@ class ASTQuery {
 					callbacks = typeSelectorsMap["*"];
 				}
 
-				callbacks.push({callback, attrRules, isPostCallback});
+				callbacks.push({callback, attrRules, isPostCallback, mod});
+			}
+		}
+
+		if ( mod !== void 0 ) {
+			if ( Array.isArray(mod) ) {
+				this.mods.add(...mod);
+			}
+			else {
+				this.mods.add(mod);
 			}
 		}
 
 		{
 			let matchedCallbacks = []
 				, {onnode} = this.options
+				, universalSelectorsMap = typeSelectorsMap["*"]
 			;
 
 			if ( typeof onnode !== 'function' ) {
@@ -145,23 +207,38 @@ class ASTQuery {
 			}
 
 			let callback = (node, parentNode, parentProp, childIndex, isPost) => {
-				for( let {callback, attrRules, isPostCallback} of [...typeSelectorsMap["*"], ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])] ) {
-					if( isPost == isPostCallback && (!attrRules || !attrRules.length || matchAttributes(node, attrRules)) ) {
-						matchedCallbacks.push({callback, node});
-					}
-				}
-
 				if ( onnode ) {
 					if ( onnode(node, parentNode, parentProp, childIndex) === false ) {
 						return;
+					}
+				}
+
+				let selectorsMap = [...universalSelectorsMap, ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])];
+
+				for ( let {callback, attrRules, isPostCallback, mod} of selectorsMap ) {
+					if( isPost == isPostCallback
+						&& (!attrRules || !attrRules.length || matchAttributes(node, attrRules))
+					) {
+						matchedCallbacks.push({callback, node, mod});
 					}
 				}
 			};
 
 			this.traverse(this.ast, callback, isPostCallbacks ? callback : void 0);
 
-			for( let {callback, node} of matchedCallbacks ) {
-				callback.call(selectorsMap, node);
+			for ( let {callback, node, mod} of matchedCallbacks ) {
+				if ( !mod && !this.mods.length || this._isInMods(mod) ) {
+					callback.call(selectorsMap, node, this);
+				}
+			}
+		}
+
+		if ( mod !== void 0 ) {
+			if ( Array.isArray(mod) ) {
+				this.mods.remove(...mod);
+			}
+			else {
+				this.mods.remove(mod);
 			}
 		}
 

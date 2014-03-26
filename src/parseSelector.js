@@ -1,4 +1,4 @@
-
+"use strict";
 
 const
 	/** @type {RegExp} @const */
@@ -8,7 +8,7 @@ const
 
 	 */
 	/** @type {RegExp} @const */
-	, RE__queryCompoundSelector__selectorMatch = /^([,>+~\s])?([\w\-\|\*]*)#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?::([^!]+))?(!)?$////^([,>+~ ])?(\$)?([\w\-\|\*]*)\#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?:\:(.+))?$/
+	, RE__queryCompoundSelector__selectorMatch = /^([,>+~\s])?([\w\-\|\*]*)#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?::([^!]+))?(!)?$/ ///^([,>+~ ])?(\$)?([\w\-\|\*]*)\#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?:\:(.+))?$/
 	/*TODO::CSS4 Reference combinator
 	 , RE__queryCompoundSelector__selectorMatch = /^([,>+~/ ])?(\$)?([\w\-\|\*]*)\#?([\w-]*)((?:\.?[\w-])*)(\[.+\])?(?:\:(.+))?$/*/
 
@@ -36,6 +36,51 @@ const
 		 "/" : 5//CSS4 Reference combinator
 		 */
 	}
+
+	/** @enum {number} @const */
+	, SELECTOR_PSEUDOS_MAP = {
+		'nth-child' : 0,
+		'nth-last-child' : 1,
+		'only-child' : 2,
+		'first-child' : 3,
+		'last-child' : 4,
+		'root' : 5,
+		'empty' : 6,
+		'contains' : 12,
+		'not' : 13,
+		'matches' : 14,
+		'scope' : 17
+
+		, 'active': 80
+
+		//TODO::
+		/*'first-of-type' : 18,
+		 'nth-of-type' : 19,
+		 'only-of-type' : 20,
+		 'nth-last-of-type' : 21,
+		 'last-of-type' : 22*/
+		/*
+		 TODO::   http://css4-selectors.com/selector/css4/
+		 'scope' : 17,
+		 'dir' ???
+		 'nth-match'//nth-match(n of selector) | an E element, the n-th sibling matching selector
+		 'nth-last-match'//nth-last-match(n of selector) | an E element, the n-th sibling matching selector, counting from the last one
+		 'indeterminate' : 16,
+		 'default' : 17,
+		 'valid': 18,
+		 'invalid' : 19,
+		 'in-range' : 20,        //http://www.w3.org/TR/selectors4/#range-pseudos
+		 'out-of-range' : 20,    //http://www.w3.org/TR/selectors4/#range-pseudos
+		 'required' : 20,        //http://www.w3.org/TR/selectors4/#opt-pseudos
+		 'optional' : 20,        //http://www.w3.org/TR/selectors4/#opt-pseudos
+		 'column' : 20,          //http://www.w3.org/TR/selectors4/#column-pseudo
+		 'nth-column' :20,       //http://www.w3.org/TR/selectors4/#nth-column-pseudo
+		 'nth-last-column' : 20, //http://www.w3.org/TR/selectors4/#nth-last-column-pseudo
+		 'current' : 20,         //http://www.w3.org/TR/selectors4/#current-pseudo
+		 'past' : 20,            //http://www.w3.org/TR/selectors4/#past-pseudo
+		 'future' : 20           //http://www.w3.org/TR/selectors4/#future-pseudo
+		 */
+	}
 ;
 
 function throwSyntaxErrException(msg) {
@@ -49,6 +94,7 @@ const assert = function(expect, msg) {
 };
 
 /**
+ * @param {string} selector
  * @return {Array} parsedRule
  * parsedRule[1] - combinator type
  * parsedRule[2] - tag
@@ -65,7 +111,7 @@ const assert = function(expect, msg) {
  * parsedRule[7] === "!" - CSS4 parent selector ("!")
  * parsedRule[9] - next rule (for "tag1 tag2" next rule would be parsedRule "tag2")
  */
-function parseSelector(selector) {
+function parseSelector(selector, options = {}) {
 	let rules =	selector
 			.trim()
 			.replace(/\s*([,>+~\s])\s*/g, "$1")	// double spaces
@@ -73,6 +119,8 @@ function parseSelector(selector) {
 			.replace(/\-child\((\dn)\+(\d)\)/g, "-child\\($1%$2\\)")
 			.match(RE__queryComplexSelector__selectorsMatcher)
 		;
+
+	//let {onselector} = options;
 
 	//prepare rules
 	let index1 = 0
@@ -106,7 +154,7 @@ function parseSelector(selector) {
 		delete parsedRule.index;
 		delete parsedRule.input;
 
-		if(rule === "," || !parsedRule) {
+		if ( rule === "," || !parsedRule ) {
 			throwSyntaxErrException();
 		}
 
@@ -153,6 +201,7 @@ function parseSelector(selector) {
 	return rules;
 }
 
+// TODO:: jsdoc
 function parseAttrSelector(selector) {
 	let attrChecks;
 
@@ -163,7 +212,7 @@ function parseAttrSelector(selector) {
 		let iterateIndex = -1
 			, current_AttrCheck
 			, _tmp2
-			;
+		;
 		//Parse all attribute selector in attribute check object(array) with structure:
 		// {
 		//  0 : undefined // not using
@@ -214,74 +263,101 @@ function parseAttrSelector(selector) {
 	return attrChecks;
 }
 
-function matchAttributes(node, attributes) {
-	if( typeof attributes === 'string' ) {
-		attributes = parseAttrSelector(attributes);
+// TODO:: jsdoc
+function parsePseudoClass(selector) {
+	if ( !selector ) {
+		return void 0;
 	}
 
-	let match = true;
+	let rules = selector.split(":");
 
-	for( let attrRule of attributes ) {
-		// Save attribute check operator in a temporary variable
-		let operator = attrRule[2];
-		//attr[1] is an attribute name
-		let attrValue = node[attrRule[1]] + "";
+	//Parse all attribute selector in attribute check object(array) with structure:
+	// {
+	//  0 : undefined // not using
+	//  1 : <number> // pseudo type defined in map SELECTOR_PSEUDOS_MAP
+	//  2 : <Array.<[undefined, number, string, number]>|undefined> // [For Tree-Structural pseudo-class] parsed Tree-Structural pseudo-class rule, for example in :nth-child(an+b) "an+b" - is a rule. Structure for rule:
+	//   {
+	//     0 : undefined // not using
+	//     1 : <number> // "a" from "an+b"
+	//     2 : <string> // operator "an+b", in this case it is "+"
+	//     3 : <number> // "b" from "an+b"
+	//   }
+	//  3 : <string|undefined> // [For Tree-Structural pseudo-class] property for saving caching result of rule (for example "an+b") to Node "nodeIndexLast" or "nodeIndex"
+	//  4 : <string|undefined> // [For Tree-Structural pseudo-class] Node child property name: "lastChild" or "firstChild"
+	//  5 : <string|undefined> // [For Tree-Structural pseudo-class] Node sibling property name: "previousSibling" or "nextSibling"
+	// }
+	let iterateIndex = -1, rule;
+	while ( rule = rules[++iterateIndex] ) {
+		rules[iterateIndex] = rule = rule.match(/^([^(]+)(?:\((.+)\))?$/);
 
-		// Quick check if we have no attribute value and attribute check operator is not '!=' (8)
-		if(attrValue === null) {
-			match = operator === 8;
-			continue;
-		}
-		attrValue = attrValue + "";
-
-		// CSS4 Attribute case-sensitivity
-		if ( attrRule[4] ) {
-			attrValue = attrValue.toUpperCase();
-		}
-
-		// Expected attribute value
-		let attrExpectedValue = attrRule[3];
-
-		switch(operator) {// operator - attribute check operator defined in map SELECTOR_ATTR_OPERATIONS_MAP
-
-			case 1://css3Attr[2] == '' // W3C "an E element with a "attrValue" attribute"
-				match = !!attrValue || attrValue === "";
-				break;
-
-			case 2://'=' // W3C "an E element whose "attrValue" attribute attrExpectedValue is exactly equal to "attrExpectedValue"
-				match = attrValue === attrExpectedValue;
-				break;
-
-			case 3://'&=' // from w3.prg "an E element whose "attrValue" attribute attrExpectedValue is a list of space-separated attrExpectedValue's, one of which is exactly equal to "attrExpectedValue"
-			case 8://'!=' // attrValue doesn't contain given attrExpectedValue
-				match = (new RegExp(`(^| +)${attrExpectedValue}($| +)`).test(attrValue));
-				if(operator === 8)match = !match;
-				break;
-
-			case 4://'^=' // from w3.prg "an E element whose "attrValue" attribute attrExpectedValue begins exactly with the string "attrExpectedValue"
-			case 5://'$=' // W3C "an E element whose "attrValue" attribute attrExpectedValue ends exactly with the string "attrExpectedValue"
-			case 6://'*=' // W3C "an E element whose "attrValue" attribute attrExpectedValue contains the substring "attrExpectedValue"
-				let containsIndex = attrValue.indexOf(attrExpectedValue);
-				match = operator === 6 ? !!~containsIndex : operator === 5 ? (containsIndex == attrValue.length - attrExpectedValue.length) : !containsIndex;
-				break;
-
-			case 7://'|=' // W3C "an E element whose "attrValue" attribute has a hyphen-separated list of attrExpectedValue's beginning (from the left) with "attrExpectedValue"
-				match = ((attrValue === attrExpectedValue || !!~attrValue.indexOf(attrExpectedValue + '-')));
-				break;
-
-			case 9://'~='
-				match = !!~(` ${attrValue.replace(/\s/g, " ")} `).indexOf(` ${attrExpectedValue} `);
-				break;
+		if ( !rule ) {
+			throwSyntaxErrException();
 		}
 
-		if( !match )break;
+		// delete unnecessary info
+		rule[0] = rule["input"] = rule["index"] = void 0;
+
+		// save pseudo type into a temporary variable
+		let preudoType = rule[1] = SELECTOR_PSEUDOS_MAP[rule[1]];
+
+		// Check if this is a Tree-Structural pseudo-class 'nth-child' (preudoType == 0) or 'nth-last-child' (preudoType == 1)
+		if ( preudoType < 2 && rule[2] ) {
+			if ( !/\D/.test(rule[2]) ) { // number value like nth-child(2n+1)
+				rule[2] = [null, 0, '%', rule[2]];
+			}
+			else if(rule[2] === 'even') {
+				rule[2] = [null, 2];
+			}
+			else if(rule[2] === 'odd') {
+				rule[2] = [null, 2, '%', 1];
+			}
+			else {
+				rule[2] = rule[2].match(/(?:([-]?\d*)n)?(?:(%|-)(\d*))?/);
+				rule[2][0] = null;// delete unnecessary string
+				if ( !rule[2][3] ) {//delete noop nth-child(n)
+					rules.splice(iterateIndex, 1);
+					--iterateIndex;
+				}
+			}
+
+			rule[3] = preudoType ? "nodeIndexLast" : "nodeIndex";
+			rule[4] = preudoType ? "lastChild" : "firstChild";
+			rule[5] = preudoType ? "previousSibling" : "nextSibling";
+		}
+// TODO
+//		else if(preudoType === 17) {//:scope pseudo class
+//			if(!scope_isFirstRule) {
+//				throwSyntaxErrException();
+//			}
+//			isMatchesSelector = true;
+//			preResult = root_is_iterable_object ? roots : [roots];
+//			rules.splice(iterateIndex, 1);
+//			--iterateIndex;
+//		}
+		else if( preudoType == 12 ) {//:contains pseudo class
+			let pattern = rule[2];
+
+			if ( pattern ) {
+				if ( /['"]/.test(pattern.charAt(0)) && /['"]/.test(pattern.charAt(pattern.length - 1)) ) {
+					rule[2] = pattern.substr(1, pattern.length - 2);
+				}
+			}
+		}
+		/*TODO:
+		 else if(preudoType === 18) {//:focus pseudo class
+		 isMatchesSelector = true;
+		 preResult = [document.activeElement];
+		 }*/
 	}
 
-	return match;
+	if ( rules.length ) {
+		return rules;
+	}
+	return void 0;
 }
 
 module.exports = {
 	parseSelector
 	, parseAttrSelector
-	, matchAttributes
+	, parsePseudoClass
 };

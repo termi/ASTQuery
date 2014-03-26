@@ -3,11 +3,14 @@
 const es6transpiler = require('es6-transpiler')
 	, path = require('path')
 	, fs = require('fs')
-	, BUILD_VERSION = require('../package.json').version
+	, _package = require('../package.json')
+	, BUILD_VERSION = _package.version
 	, targetDir = path.join(__dirname, 'es5')
 	, srcDir = path.join(__dirname, '..', 'src')
 	, projectDit = path.join(__dirname, '..')
 ;
+
+console.log('Beginning ' + _package.name + '(version ' + BUILD_VERSION + ') build');
 
 function prepareFile(files, fileOrDir, fullPath) {
 	let extname = path.extname(fileOrDir);
@@ -46,7 +49,10 @@ function prepareFile(files, fileOrDir, fullPath) {
 
 [
 	'ASTQuery'
+	, 'parseSelector'
 	, 'querySelector'
+	, 'matchSelector'
+	, 'TokenList'
 	, 'keys'
 	, path.join('..', 'test')
 ].reduce(prepareFile, []).forEach(function(file) {

@@ -104,4 +104,53 @@ exports['simple'] = {
 		test.equals(obj['escapeChar'], 'escapeChar');
 		test.done();
 	}
+
+	, 'mod\'ed selectors': function(test) {
+		const outerNodesSequenceExpected = "|alternative|alternative";
+		const innerNodesSequenceExpected = "|alternative-inner|alternative-inner|alternative-inner|alternative-inner";
+		const nodesSequenceExpected = "|group|escapeChar|group";
+		let outerNodesSequence = "", innerNodesSequence = "", nodesSequence = "";
+		let sourceIndex = 0;
+		const expectedSourceIndexes = ["alternative|2", "alternative|2", "group|3", "alternative|4", "escapeChar|5", "alternative|6", "alternative|6", "group|7", "alternative|8"];
+		let sourceIndexes = [];
+
+		const obj = {
+			'? *': function(node) {
+				node.__sourceIndex = ++sourceIndex;
+			}
+			, 'alternative': function(node, astQuery) {
+				outerNodesSequence += `|${node.type}`;
+				astQuery.mods.toggle('inner');
+
+				sourceIndexes.push(`${node.type}|${node.__sourceIndex}`);// 2, 6
+			}
+			, '?inner alternative': function(node) {
+				innerNodesSequence += `|${node.type}-inner`;
+
+				sourceIndexes.push(`${node.type}|${node.__sourceIndex}`);// 2, 4, 6, 8
+			}
+			, '? group': function(node) {//& - empty mod evaluated as '*'
+				nodesSequence += `|${node.type}`;
+
+				sourceIndexes.push(`${node.type}|${node.__sourceIndex}`);// 3, 7
+			}
+			, '?*?any escapeChar': function(node) {//&* - has universal '*' mod
+				nodesSequence += `|${node.type}`;
+
+				sourceIndexes.push(`${node.type}|${node.__sourceIndex}`);// 5
+			}
+			, '^ ?inner alternative': function(node, astQuery) {
+				astQuery.mods.toggle('inner');
+			}
+		};
+
+		regExpAstQuery.on(obj);
+
+		test.equals(outerNodesSequence, outerNodesSequenceExpected);
+		test.equals(innerNodesSequence, innerNodesSequenceExpected);
+		test.equals(nodesSequence, nodesSequenceExpected);
+		test.deepEqual(sourceIndexes, expectedSourceIndexes);
+		test.equals(regExpAstQuery.mods.length, 0);
+		test.done();
+	}
 };
