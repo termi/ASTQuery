@@ -150,7 +150,7 @@ class ASTQuery {
 			for ( let [ , , typeName, nameValue, className, attrRules = [], pseudoClass, isParentSelector, , nextRule] of parseSelector(selector) ) {
 
 				if ( nextRule ) {
-					throw new Error(`Complex selectors doesn\'t supported for now`);
+					throw new Error("Complex selectors doesn't supported for now");
 				}
 
 				if ( className || pseudoClass || isParentSelector ) {
