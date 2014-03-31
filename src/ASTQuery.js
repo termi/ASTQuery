@@ -45,6 +45,7 @@ class ASTQuery {
 	reset() {
 		this.mods = new TokenList;
 
+		this._selectorGroup = 0;
 		this._typeSelectorsMap = Object.create(null);
 		this._typeSelectorsMap["*"] = [];
 		this._nameSelectorsMap = Object.create(null);
@@ -138,8 +139,10 @@ class ASTQuery {
 		}
 	}
 
-	addListener(sel, callback, {mod, defaultMod, self} = {}) {
+	addListener(sel, callback, {group = this._selectorGroup, mod, defaultMod, self} = {}) {
 		assert(typeof callback === 'function', 'Callback must be a function');
+
+		group = group | 0;
 
 		let typeSelectorsMap = this._typeSelectorsMap
 			, nameSelectorsMap = this._nameSelectorsMap
@@ -187,11 +190,11 @@ class ASTQuery {
 				callbacks = typeSelectorsMap["*"];
 			}
 
-			callbacks.push({callback, attrRules, isPost, mods, defaultMod, self});
+			callbacks.push({callback, attrRules, isPost, group, mods, defaultMod, self});
 		}
 	}
 
-	on(selectorsMap, {prefix, mod, defaultMod} = {}) {
+	on(selectorsMap, {prefix, mod, defaultMod, group = this._selectorGroup++} = {}) {
 		assert(typeof selectorsMap === 'object');
 
 		let prefixLength = 0;
@@ -210,7 +213,7 @@ class ASTQuery {
 				selector = selector.substring(prefixLength);
 			}
 
-			this.addListener(selector, callback, {mod, defaultMod, self: selectorsMap})
+			this.addListener(selector, callback, {mod, defaultMod, group, self: selectorsMap})
 		}
 	}
 
@@ -328,20 +331,26 @@ class ASTQuery {
 
 				let selectorsMap = [...universalSelectorsMap, ...(typeSelectorsMap[node.type] || nameSelectorsMap[node.name] || [])];
 
-				for ( let {callback, attrRules, isPost = false, mods, self} of selectorsMap ) {
+				for ( let {callback, attrRules, isPost = false, mods, group, self} of selectorsMap ) {
 					if( isPost == isPostCallback
 						&& (!attrRules || !attrRules.length || matchAttributes(node, attrRules))
 					) {
-						matchedCallbacks.push({callback, node, mods, self});
+						let matchedCallbacksGroup = matchedCallbacks[group];
+						if ( !matchedCallbacksGroup ) {
+							matchedCallbacksGroup = matchedCallbacks[group] = [];
+						}
+						matchedCallbacksGroup.push({callback, node, mods, self});
 					}
 				}
 			};
 
 			this.traverse(this.ast, callback, isPostCallbacks ? callback : void 0);
 
-			for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacks ) {
-				if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
-					callback.call(self, node, this);
+			for ( let matchedCallbacksGroup of matchedCallbacks ) {
+				for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacksGroup ) {
+					if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
+						callback.call(self, node, this);
+					}
 				}
 			}
 		}

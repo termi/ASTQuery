@@ -167,4 +167,46 @@ exports['simple'] = {
 		test.equals(regExpAstQuery.mods.length, 0);
 		test.done();
 	}
+
+//	, 'post (^) callback': function(test) {
+//		// TODO::
+//	}
+
+	, 'matches queue': function(test) {
+		const expectedMatchesQueue = [1, 2, 3, 4];
+		let matchesQueue = [];
+
+		const obj1 = {
+			':: *': function() {
+				if ( matchesQueue.indexOf(1) === -1 ) {
+					matchesQueue.push(1);
+				}
+			}
+			, ':: ^ *': function() {
+				if ( matchesQueue.indexOf(2) === -1 ) {
+					matchesQueue.push(2);
+				}
+			}
+		};
+		const obj2 = {
+			':: *': function() {
+				if ( matchesQueue.indexOf(3) === -1 ) {
+					matchesQueue.push(3);
+				}
+			}
+			, ':: ^ *': function() {
+				if ( matchesQueue.indexOf(4) === -1 ) {
+					matchesQueue.push(4);
+				}
+			}
+		};
+
+		regExpAstQuery.reset();
+		regExpAstQuery.on(obj1, {prefix: '::'});
+		regExpAstQuery.on(obj2, {prefix: '::'});
+		regExpAstQuery.apply();
+
+		test.deepEqual(matchesQueue, expectedMatchesQueue);
+		test.done();
+	}
 };
