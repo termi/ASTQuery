@@ -12,12 +12,14 @@ exports['simple'] = {
 		const nodesCountExpected = 3;
 		let nodesCount = 0;
 
+		es6AstQuery.reset();
 		es6AstQuery.on({
 			Literal({type}) {
 				test.equals(type, 'Literal', `should found only node's with type "Literal"`);
 				nodesCount++;
 			}
 		});
+		es6AstQuery.apply();
 
 		test.equals(nodesCount, nodesCountExpected, `should found ${nodesCountExpected} node's`);
 		test.done();
@@ -26,12 +28,14 @@ exports['simple'] = {
 		const nodesCountExpected = 3;
 		let nodesCount = 0;
 
+		es6AstQuery.reset();
 		es6AstQuery.on({
 			'#a': function({name}) {
 				test.equals(name, 'a', `should found only node's with name='a'`);
 				nodesCount++;
 			}
 		});
+		es6AstQuery.apply();
 
 		test.equals(nodesCount, nodesCountExpected, `should found ${nodesCountExpected} node's`);
 		test.done();
@@ -40,12 +44,14 @@ exports['simple'] = {
 		const nodesCountExpected = 2;
 		let nodesCount = 0;
 
+		es6AstQuery.reset();
 		es6AstQuery.on({
 			'[shorthand=true]': function({shorthand}) {
 				test.equals(shorthand, true, `should found only node's with shorthand=true`);
 				nodesCount++;
 			}
 		});
+		es6AstQuery.apply();
 
 		test.equals(nodesCount, nodesCountExpected, `should found ${nodesCountExpected} node's`);
 		test.done();
@@ -55,12 +61,14 @@ exports['simple'] = {
 		const nodesCountExpected = 2;
 		let nodesCount = 0;
 
+		regExpAstQuery.reset();
 		regExpAstQuery.on({
 			'dot,escapeChar[value=S]': function({type}) {
 				test.ok(type == 'dot' || type == 'escapeChar', `type should be 'dot' or 'escapeChar'`);
 				nodesCount++;
 			}
 		});
+		regExpAstQuery.apply();
 
 		test.equals(nodesCount, nodesCountExpected, `should found ${nodesCountExpected} node's`);
 		test.done();
@@ -73,6 +81,7 @@ exports['simple'] = {
 		let pre = ({type}) => (nodesSequence = nodesSequence + "|" + type);
 		let post = ({type}) => (nodesSequence = nodesSequence + "|^" + type);
 
+		regExpAstQuery.reset();
 		regExpAstQuery.on({
 			'disjunction': pre
 			, 'alternative': pre
@@ -80,6 +89,7 @@ exports['simple'] = {
 			, 'escapeChar': pre
 			, '^disjunction': post
 		});
+		regExpAstQuery.apply();
 
 		test.equals(nodesSequence, nodesSequenceExpected, `the node sequence should be ${nodesSequenceExpected}`);
 		test.done();
@@ -98,7 +108,9 @@ exports['simple'] = {
 			}
 		};
 
+		regExpAstQuery.reset();
 		regExpAstQuery.on(obj, {prefix: '::'});
+		regExpAstQuery.apply();
 
 		test.equals(obj['dot'], 'dot');
 		test.equals(obj['escapeChar'], 'escapeChar');
@@ -144,7 +156,9 @@ exports['simple'] = {
 			}
 		};
 
+		regExpAstQuery.reset();
 		regExpAstQuery.on(obj);
+		regExpAstQuery.apply();
 
 		test.equals(outerNodesSequence, outerNodesSequenceExpected);
 		test.equals(innerNodesSequence, innerNodesSequenceExpected);

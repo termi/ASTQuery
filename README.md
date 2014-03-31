@@ -28,7 +28,14 @@ astQuery.on({
 //	, ':: UpdateExpression[operator="++"]': function(node) {
 //		this.print(node, '4| ' + node.argument.name + "|" + node.operator);
 //	}
+
+// TODO::
+//	, ':: :other': function(node) {
+//		console.log('  untouched node type is ' + node.type);
+//	}
 }, {prefix: '::'});
+
+astQuery.apply();
 
 // console output is:
 // > node type is FunctionDeclaration | 1|
@@ -37,3 +44,11 @@ astQuery.on({
 // > node type is AssignmentExpression | 3| a|=
 
 ```
+
+TODO
+
+1. ':other' pseudo-class
+1. complex selector's support ('tag>tag')
+1. classes support with API to adding class description
+1. es6 'query' string template tag (astQuery.query`VariableDeclarator:${function(node){ return node.id.name == 'a' }}`)
+1. 'removeListener'
