@@ -386,7 +386,7 @@ class ASTQuery {
 			}
 			else {
 				for ( let matchedCallbacksGroup of matchedCallbacks ) {
-					for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacksGroup ) {
+					for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacksGroup || [] ) {
 						if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
 							callback.call(self, node, this);
 						}
