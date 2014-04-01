@@ -364,6 +364,31 @@ class ASTQuery {
 			}
 		}
 	}
+
+	getAST({cleanup}) {//TODO:: tests
+		let ast = this.ast;
+
+		if ( cleanup === true ) {
+			this._prepared = false;
+			this.callbacksCollected = false;
+			let visitorKeysMaps = {};
+
+			this.traverse(ast, (node) => {
+				let visitorKeysMap = visitorKeysMaps[node.type];
+				if ( !visitorKeysMap ) {
+					visitorKeysMap = visitorKeysMaps[node.type] = this.visitorKeys[node.type].reduce( (val, name) => {val[name] = null;return val}, {});
+				}
+
+				for( let propName in node ) if ( node.hasOwnProperty(propName) ) {
+					if ( visitorKeysMap[propName] === void 0 ) {
+						delete node[propName];
+					}
+				}
+			});
+		}
+
+		return ast;
+	}
 }
 ASTQuery.version = BUILD_VERSION;
 
