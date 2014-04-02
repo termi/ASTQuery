@@ -248,6 +248,14 @@ class ASTQuery {
 			onpreparenode = void 0;
 		}
 
+		if ( node === void 0 ) {
+			if ( typeof pre === 'function' ) {
+				post = pre;
+				node = this.ast;
+				pre = void 0;
+			}
+		}
+
 		if ( pre === void 0 ) {
 			if ( typeof node === 'function' ) {//astQuery.traverse(function(anyNode){})
 				pre = node;
@@ -272,32 +280,30 @@ class ASTQuery {
 				}
 			}
 
-			if ( pre(node, parentNode, parentProp, childIndex, false) === false ) {
-				return false;
-			}
+			let goDeeper = pre(node, parentNode, parentProp, childIndex, false);
 
-			for ( const propName of (this.visitorKeys[node.type] || []) ) {
-				const child = node[propName];
+			if ( goDeeper !== false ) {
+				for ( const propName of (this.visitorKeys[node.type] || []) ) {
+					const child = node[propName];
 
-				if ( Array.isArray(child) ) {
-					let childIndex = 0;
-					for ( let _child of child ) if ( _child ) {
-						if ( visit(_child, node, propName, childIndex++) === false ) {
-							return false;
+					if ( Array.isArray(child) ) {
+						let childIndex = 0;
+						for ( let _child of child ) if ( _child ) {
+							if ( visit(_child, node, propName, childIndex++) === false ) {
+								return false;
+							}
 						}
 					}
-				}
-				else if ( child ) {
-					if ( visit(child, node, propName) === false ) {
-						return false;
+					else if ( child ) {
+						if ( visit(child, node, propName) === false ) {
+							return false;
+						}
 					}
 				}
 			}
 
 			if ( post ) {
-				if ( post(node, parentNode, parentProp, childIndex, true) === false ) {
-					return false;
-				}
+				post(node, parentNode, parentProp, childIndex, true);
 			}
 		};
 
