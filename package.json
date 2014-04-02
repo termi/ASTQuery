@@ -1,6 +1,6 @@
 {
   "name": "astquery",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "",
   "main": "./build/es5/ASTQuery.js",
   "repository": {
