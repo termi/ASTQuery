@@ -55,6 +55,7 @@ class ASTQuery {
 		this._preudoSelectorsMap = Object.create(null);
 
 		this.callbacksCollected = false;
+		this.currentNode = void 0;
 	}
 
 	get callbacksCollected() {
