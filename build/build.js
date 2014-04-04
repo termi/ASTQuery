@@ -50,7 +50,7 @@ function prepareFile(files, fileOrDir, fullPath) {
 [
 	'ASTQuery'
 	, 'parseSelector'
-	, 'querySelector'
+//	, 'querySelector'
 	, 'matchSelector'
 	, 'TokenList'
 	, 'keys'
