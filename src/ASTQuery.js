@@ -34,6 +34,9 @@ class ASTQuery {
 		this.ast = ast;
 
 		this.options = options;
+		if ( this.options.attrNameAsPath === void 0 ) {
+			this.options.attrNameAsPath = true;
+		}
 
 		this._sourceIndex = 0;
 		this._prevNode = void 0;
@@ -346,7 +349,7 @@ class ASTQuery {
 
 			for ( let {callback, attrRules, isPost = false, mods, group, self} of selectorsMap ) {
 				if( isPost == isPostCallback
-					&& (!attrRules || !attrRules.length || matchAttributes(node, attrRules))
+					&& (!attrRules || !attrRules.length || matchAttributes(node, attrRules, this.options))
 				) {
 					let matchedCallbacksGroup = matchedCallbacks[group];
 					if ( !matchedCallbacksGroup ) {

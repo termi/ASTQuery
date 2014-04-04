@@ -74,6 +74,23 @@ exports['simple'] = {
 		test.done();
 	}
 
+	, 'VariableDeclarator[id.name=a]': function(test) {
+		const nodesCountExpected = 2;
+		let nodesCount = 0;
+
+		es6AstQuery.reset();
+		es6AstQuery.on({
+			'VariableDeclarator[id.name=a]': function({id: {name}}) {
+				test.equals(name, 'a', `should found only node's id.name="a"`);
+				nodesCount++;
+			}
+		});
+		es6AstQuery.apply();
+
+		test.equals(nodesCount, nodesCountExpected, `should use attribute name as a path to reach the node. Should found ${nodesCountExpected} node's`);
+		test.done();
+	}
+
 	, '"post" callback test': function(test) {
 		const nodesSequenceExpected = "|disjunction|alternative|alternative|escapeChar|^group|alternative|alternative|^group|^disjunction";
 		let nodesSequence = "";

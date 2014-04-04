@@ -2,7 +2,23 @@
 
 const {parseAttrSelector} = require('./parseSelector.js');
 
-function matchAttributes(node, attributes) {
+/**
+ * Get the value of a property which may be multiple levels down in the object.
+ */
+function getPathValue(node, path) {
+	let names = path.split("."), name;
+
+	while ( name = names.shift() ) {
+		if (node == null) {
+			return names.length ? void 0 : null;
+		}
+		node = node[name];
+	}
+
+	return node;
+}
+
+function matchAttributes(node, attributes, options) {
 	if( typeof attributes === 'string' ) {
 		attributes = parseAttrSelector(attributes);
 	}
@@ -13,10 +29,16 @@ function matchAttributes(node, attributes) {
 		// Save attribute check operator in a temporary variable
 		let operator = attrRule[2];
 		//attr[1] is an attribute name
-		let attrValue = node[attrRule[1]] + "";
+		let attrName = attrRule[1], attrValue;
+		if ( attrName.indexOf('.') !== -1 && (options || {}).attrNameAsPath === true ) {
+			attrValue = getPathValue(node, attrName);
+		}
+		else {
+			attrValue = node[attrName];
+		}
 
 		// Quick check if we have no attribute value and attribute check operator is not '!=' (8)
-		if(attrValue === null) {
+		if(attrValue === void 0 && !(attrRule[1] in node)) {
 			match = operator === 8;
 			continue;
 		}
