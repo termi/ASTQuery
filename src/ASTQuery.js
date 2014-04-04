@@ -382,20 +382,15 @@ class ASTQuery {
 			let matchedCallbacks = this._matchedCallbacks;
 
 			if ( group !== void 0 ) {
-				if ( matchedCallbacks[group] ) {
-					for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacks[group] ) {
-						if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
-							callback.call(self, node, this);
-						}
-					}
-				}
+				matchedCallbacks = [ matchedCallbacks[group] ];
 			}
-			else {
-				for ( let matchedCallbacksGroup of matchedCallbacks ) {
-					for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacksGroup || [] ) {
-						if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
-							callback.call(self, node, this);
-						}
+
+			for ( let matchedCallbacksGroup of matchedCallbacks ) {
+				for ( let {callback, node, mods, defaultMod, self = null} of matchedCallbacksGroup || [] ) {
+					if ( !mods && !this.mods.length || mods && this._isInMods(defaultMod, ...mods) ) {
+						this.currentNode = node;
+						callback.call(self, node, this);
+						this.currentNode = void 0;
 					}
 				}
 			}
@@ -422,7 +417,12 @@ class ASTQuery {
 			this.traverse(ast, (node) => {
 				let visitorKeysMap = visitorKeysMaps[node.type];
 				if ( !visitorKeysMap ) {
-					visitorKeysMap = visitorKeysMaps[node.type] = this.visitorKeys[node.type].reduce( (val, name) => {val[name] = null;return val}, {});
+					visitorKeysMap = visitorKeysMaps[node.type] = this.visitorKeys[node.type].reduce(
+						(val, name) => {
+							val[name] = null;
+							return val;
+						}, {}
+					);
 				}
 
 				for( let propName in node ) if ( node.hasOwnProperty(propName) ) {
